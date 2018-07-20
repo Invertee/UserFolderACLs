@@ -38,14 +38,17 @@
 #> 
 Param(
     [parameter()] [switch] $AddDomainAdmins,
+    [parameter()] [string] $AddAdditionalDomainGroup,
     [parameter()] [switch] $DisableInheritance,   
     [parameter()] [switch] $RemoveCurrentACLs,
     [parameter(Mandatory=$true)] $Folder
 )
 
-$Userfolders = Get-ChildItem $Folder
+$Userfolders = Get-ChildItem $Folder -Directory
 $Failed = 0
 $Success = 0
+$Count = $Userfolders.Count
+Write-Warning "You are about to change permissions on $Count folders, continue?" -WarningAction Inquire
 
 Foreach ($Folder in $Userfolders) {
     Write-host "Setting permissions on $Folder"
@@ -61,13 +64,20 @@ if ($RemoveCurrentACLs) {
     $ACL.Access | Foreach-Object { $ACL.RemoveAccessRule($_) | out-null}
 }
 
+if ($AddAdditionalDomainGroup) {
+    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\$AddAdditionalDomainGroup","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
+    $ACL.SetAccessRule($AccessRule)
+}
+
 # Adds Permissions for User
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($Username,"FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
 $ACL.SetAccessRule($AccessRule)
 
+if ($AddDomainAdmins) {
 ## Adds Permissions for domain admin group
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\Domain Admins","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
 $ACL.SetAccessRule($AccessRule)
+}
 
 ## Adds Permissions for system group
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
