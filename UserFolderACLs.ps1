@@ -37,13 +37,15 @@
 
 #> 
 Param(
-    [parameter()] [switch] $AddDomainAdmins,
+    [parameter()] [switch] $DontAddAdmins,
     [parameter()] [string] $AddAdditionalDomainGroup,
-    [parameter()] [switch] $DisableInheritance,   
-    [parameter()] [switch] $RemoveCurrentACLs,
+    [parameter()] [switch] $DontDisableInheritance,   
+    [parameter()] [switch] $DontRemoveCurrentACLs,
     [parameter(Mandatory=$true)] $Folder
 )
 
+#$ErrorActionPreference = 'Stop'
+$Directory = $Folder
 $Userfolders = Get-ChildItem $Folder -Directory
 $Failed = 0
 $Success = 0
@@ -53,48 +55,55 @@ Write-Warning "You are about to change permissions on $Count folders, continue?"
 Foreach ($Folder in $Userfolders) {
     Write-host "Setting permissions on $Folder"
 
-$Username = $env:userdomain + '\' + $Folder.BaseName
-$ACL = Get-ACL $Folder.FullName
+    $Username = $env:userdomain + '\' + $Folder.BaseName
+    $ACL = Get-ACL $Folder.FullName
 
-if ($DisableInheritance) {
-    $ACL.SetAccessRuleProtection($true,$true)
-}
+    Try {
 
-if ($RemoveCurrentACLs) {
-    $ACL.Access | Foreach-Object { $ACL.RemoveAccessRule($_) | out-null}
-}
+        $ACL.SetOwner([System.Security.Principal.NTAccount]"$Username")
 
-if ($AddAdditionalDomainGroup) {
-    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\$AddAdditionalDomainGroup","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
-    $ACL.SetAccessRule($AccessRule)
-}
+        if (!($DontDisableInheritance)) {
+            $ACL.SetAccessRuleProtection($true,$false)
+        }
 
-# Adds Permissions for User
-$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($Username,"FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
-$ACL.SetAccessRule($AccessRule)
+        if (!($DontRemoveCurrentACLs)) {
+            $ACL.Access | Foreach-Object { $ACL.RemoveAccessRule($_) | Out-Null}
+            Set-ACL $Folder.FullName $ACL -ErrorAction Stop
+            $ACL = Get-ACL $Folder.FullName
+        }
 
-if ($AddDomainAdmins) {
-## Adds Permissions for domain admin group
-$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\Domain Admins","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
-$ACL.SetAccessRule($AccessRule)
-}
+        if ($AddAdditionalDomainGroup) {
+            $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\$AddAdditionalDomainGroup","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
+            $ACL.SetAccessRule($AccessRule)
+        }
 
-## Adds Permissions for system group
-$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
-$ACL.SetAccessRule($AccessRule)
+        # Adds Permissions for User
+        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($Username,"FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
+        $ACL.SetAccessRule($AccessRule)
 
-## Adds Permissions for Administrators group
-$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
-$ACL.SetAccessRule($AccessRule)
+        if (!($DontAddAdmins)) {
+            ## Adds Permissions for domain admin group
+            $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\Domain Admins","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
+            $ACL.SetAccessRule($AccessRule)
 
-Try {
-Set-ACL $Folder.FullName $ACL -ErrorAction Stop
-$Success++
-}
-Catch {
-$Failed++
-}
+            ## Adds Permissions for Administrators group
+            $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("Administrators","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
+            $ACL.SetAccessRule($AccessRule)
+        }
 
+        ## Adds Permissions for system group
+        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
+        $ACL.SetAccessRule($AccessRule)
+
+        Set-ACL $Folder.FullName $ACL -ErrorAction Stop
+        $Success++
+
+    }
+
+    Catch {
+        $Failed++
+        $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
+    }
 
 }
 
