@@ -41,6 +41,7 @@ Param(
     [parameter()] [string] $AddAdditionalDomainGroup,
     [parameter()] [switch] $DontDisableInheritance,   
     [parameter()] [switch] $DontRemoveCurrentACLs,
+    [parameter()] [switch] $DontChangeOwner,
     [parameter(Mandatory=$true)] $Folder
 )
 
@@ -53,14 +54,16 @@ $Count = $Userfolders.Count
 Write-Warning "You are about to change permissions on $Count folders, continue?" -WarningAction Inquire
 
 Foreach ($Folder in $Userfolders) {
-    Write-host "Setting permissions on $Folder"
+    Write-Host " "
+    Write-host "Setting permissions on $Folder. " -NoNewline
 
     $Username = $env:userdomain + '\' + $Folder.BaseName
     $ACL = Get-ACL $Folder.FullName
 
     Try {
-
+        if (!($DontChangeOwner)) {
         $ACL.SetOwner([System.Security.Principal.NTAccount]"$Username")
+        }
 
         if (!($DontDisableInheritance)) {
             $ACL.SetAccessRuleProtection($true,$false)
@@ -96,6 +99,13 @@ Foreach ($Folder in $Userfolders) {
         $ACL.SetAccessRule($AccessRule)
 
         Set-ACL $Folder.FullName $ACL -ErrorAction Stop
+
+        $Inner = Get-ChildItem $Folder.FullName -Recurse
+        $InnerCount = $Inner.Count
+        Write-Host -NoNewline "$InnerCount Items."
+        Foreach ($InnerItem in $Inner) {
+            Set-Acl $InnerItem.FullName $ACL 
+        }
         $Success++
 
     }
@@ -106,8 +116,8 @@ Foreach ($Folder in $Userfolders) {
     }
 
 }
-
-Write-Output "Successfull ACLs Modified: $Success"
-Write-Output "Failed ACLs Modified: $Failed"
+Write-Host ""
+Write-Host "Successfull ACLs Modified: $Success"
+Write-Host "Failed ACLs Modified: $Failed"
 
 
