@@ -37,12 +37,12 @@
 
 #> 
 Param(
+    [parameter(Mandatory=$true)] $Folder,
+    [parameter()] [array] $AdditionalDomainGroups,
     [parameter()] [switch] $DontAddAdmins,
-    [parameter()] [string] $AddAdditionalDomainGroup,
     [parameter()] [switch] $DontDisableInheritance,   
     [parameter()] [switch] $DontRemoveCurrentACLs,
-    [parameter()] [switch] $DontChangeOwner,
-    [parameter(Mandatory=$true)] $Folder
+    [parameter()] [switch] $DontChangeOwner
 )
 
 #$ErrorActionPreference = 'Stop'
@@ -75,9 +75,12 @@ Foreach ($Folder in $Userfolders) {
             $ACL = Get-ACL $Folder.FullName
         }
 
-        if ($AddAdditionalDomainGroup) {
-            $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\$AddAdditionalDomainGroup","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
-            $ACL.SetAccessRule($AccessRule)
+        if ($AdditionalDomainGroups) {
+            Foreach ($Group in $AdditionalDomainGroups) 
+            {
+                $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:userdomain\$Group","FullControl","ContainerInherit, ObjectInherit", "None", "Allow")
+                $ACL.SetAccessRule($AccessRule)
+            }
         }
 
         # Adds Permissions for User
@@ -103,21 +106,19 @@ Foreach ($Folder in $Userfolders) {
         $Inner = Get-ChildItem $Folder.FullName -Recurse
         $InnerCount = $Inner.Count
         Write-Host -NoNewline "$InnerCount Items."
-        Try 
-        {
+        Try {
             Foreach ($InnerItem in $Inner) 
             {
                 Set-Acl $InnerItem.FullName $ACL 
             }
+            $Success++
         } catch {
-            $InnerItem+ " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
+            $InnerItem + " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
         }
-    }
-
-    Catch 
+    } Catch 
     {
         $Failed++
-        $InnerItem + " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
+        $Folder.FullName + " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
     }
 
 }
