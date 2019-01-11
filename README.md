@@ -11,6 +11,7 @@ Fixes permissions on user data folders on file servers and adds permissions to f
 For best results, run from an admin powershell session:
 
 >PS C:\windows\system32> UserFolderACLs -Folder "E:\Users\" -AdditionalDomainGroups "IT Managers","File Administrators"
+
 WARNING: You are about to change permissions on 19 folders, continue?  
 Setting permissions on adam. 251 Items...  
 Setting permissions on beverly. 488 Items...    
