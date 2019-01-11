@@ -55,7 +55,7 @@ Write-Warning "You are about to change permissions on $Count folders, continue?"
 
 Foreach ($Folder in $Userfolders) {
     Write-Host " "
-    Write-host "Setting permissions on $Folder. " -NoNewline
+    Write-host "Setting permissions on $Folder... " -NoNewline
 
     $Username = $env:userdomain + '\' + $Folder.BaseName
     $ACL = Get-ACL $Folder.FullName
@@ -103,16 +103,21 @@ Foreach ($Folder in $Userfolders) {
         $Inner = Get-ChildItem $Folder.FullName -Recurse
         $InnerCount = $Inner.Count
         Write-Host -NoNewline "$InnerCount Items."
-        Foreach ($InnerItem in $Inner) {
-            Set-Acl $InnerItem.FullName $ACL 
+        Try 
+        {
+            Foreach ($InnerItem in $Inner) 
+            {
+                Set-Acl $InnerItem.FullName $ACL 
+            }
+        } catch {
+            $InnerItem+ " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
         }
-        $Success++
-
     }
 
-    Catch {
+    Catch 
+    {
         $Failed++
-        $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
+        $InnerItem + " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
     }
 
 }
