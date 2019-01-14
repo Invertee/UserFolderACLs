@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.1
+.VERSION 0.2
 
 .GUID 822e92d8-2cbd-4db1-9c78-ccbe1a200acd
 
@@ -15,7 +15,7 @@
 
 .LICENSEURI 
 
-.PROJECTURI 
+.PROJECTURI https://github.com/Invertee/UserFolderACLs
 
 .ICONURI 
 
@@ -38,7 +38,7 @@
 #> 
 Param(
     [parameter(Mandatory=$true)] $Folder,
-    [parameter()] [array] $AdditionalDomainGroups,
+    [parameter()] [array]  $AdditionalDomainGroups,
     [parameter()] [switch] $DontAddAdmins,
     [parameter()] [switch] $DontDisableInheritance,   
     [parameter()] [switch] $DontRemoveCurrentACLs,
