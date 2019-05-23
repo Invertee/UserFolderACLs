@@ -45,6 +45,12 @@ Param(
     [parameter()] [switch] $DontChangeOwner
 )
 
+$key = Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name 'LongPathsEnabled' -ErrorAction SilentlyContinue
+if (!($key) -or ($key.LongPathsEnabled -eq 0) ) {
+    Write-Warning "Support for long file paths is disabled. Consider turning this on:
+    https://www.intel.com/content/www/us/en/programmable/support/support-resources/knowledge-base/ip/2018/how-do-i-extend-windows-server-2016-file-path-support-from-260-t.html"
+}
+
 #$ErrorActionPreference = 'Stop'
 $Directory = $Folder
 $Userfolders = Get-ChildItem $Folder -Directory
