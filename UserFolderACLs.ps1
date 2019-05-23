@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.3
+.VERSION 0.3.1
 
 .GUID 822e92d8-2cbd-4db1-9c78-ccbe1a200acd
 
@@ -142,4 +142,4 @@ Foreach ($Folder in $Userfolders) {
     $results += $folderResult
 }
 
-$results | ConvertTo-Html -CssUri 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css' | Out-File -FilePath "$Directory\ACLReport.html"
+$results | ConvertTo-Html -CssUri 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css' | Out-File -FilePath "$Directory\ACLReport.html" -Force
