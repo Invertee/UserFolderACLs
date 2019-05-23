@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.2
+.VERSION 0.3
 
 .GUID 822e92d8-2cbd-4db1-9c78-ccbe1a200acd
 
@@ -54,21 +54,22 @@ if (!($key) -or ($key.LongPathsEnabled -eq 0) ) {
 #$ErrorActionPreference = 'Stop'
 $Directory = $Folder
 $Userfolders = Get-ChildItem $Folder -Directory
-$Failed = 0
-$Success = 0
-$Count = $Userfolders.Count
-Write-Warning "You are about to change permissions on $Count folders, continue?" -WarningAction Inquire
+$results = @()
+Write-Warning "You are about to change permissions on $($Userfolders.Count) folders, continue?" -WarningAction Inquire
 
 Foreach ($Folder in $Userfolders) {
-    Write-Host " "
-    Write-host "Setting permissions on $Folder... " -NoNewline
+
+    Write-host "`nSetting permissions for folder: $Folder" -NoNewline
+    $Failed = 0
+    $Success = 0
 
     $Username = $env:userdomain + '\' + $Folder.BaseName
+    if ($Username -match '.v[1-8]') { $Username = $Username -replace '.{3}$' } 
     $ACL = Get-ACL $Folder.FullName
 
     Try {
         if (!($DontChangeOwner)) {
-        $ACL.SetOwner([System.Security.Principal.NTAccount]"$Username")
+            $ACL.SetOwner([System.Security.Principal.NTAccount]"$Username")
         }
 
         if (!($DontDisableInheritance)) {
@@ -110,26 +111,35 @@ Foreach ($Folder in $Userfolders) {
         Set-ACL $Folder.FullName $ACL -ErrorAction Stop
 
         $Inner = Get-ChildItem $Folder.FullName -Recurse
-        $InnerCount = $Inner.Count
-        Write-Host -NoNewline "$InnerCount Items."
         Try {
             Foreach ($InnerItem in $Inner) 
             {
-                Set-Acl $InnerItem.FullName $ACL 
+                Set-Acl $InnerItem.FullName $ACL
+                $Success++
+                Write-host "`r$Folder - Applying files processed $success files" -NoNewline -ForegroundColor Green
             }
-            $Success++
+            write-host "`r$Folder permissions complete. $success files proccessed." -NoNewline -ForegroundColor Green
         } catch {
-            $InnerItem + " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
+            $derror = "$InnerItem - " + $_.Exception.Message  
         }
     } Catch 
     {
-        $Failed++
-        $Folder.FullName + " - " + $error[0].Exception.Message | Out-File "$Directory\ACLErrors.log" -Append
+        if ($_ -match 'Some or all identity references could not be translated') {
+            write-host "`rFolder $Folder failed. - Can't match folder with username" -NoNewline -ForegroundColor red
+        }
+        if ($_ -match 'privilege which is required for this operation.') {
+            write-host "`r Folder $Folder failed. - Access is denied" -NoNewline -ForegroundColor red
+        }
+        $derror = "$InnerItem - " + $_.Exception.Message  
     }
 
+    $folderResult = [PSCustomObject]@{
+        Folder     = $Folder.Fullname
+        "Successful Files  " = $Success
+        "Errors" = $derror
+    }
+
+    $results += $folderResult
 }
-Write-Host ""
-Write-Host "Successfull ACLs Modified: $Success"
-Write-Host "Failed ACLs Modified: $Failed"
 
-
+$results | ConvertTo-Html -CssUri 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css' | Out-File -FilePath "$Directory\ACLReport.html"
