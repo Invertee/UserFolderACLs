@@ -1,6 +1,6 @@
 #### User Folder ACL Script
 
-Fixes permissions on user data folders on file servers and adds permissions to folders with corresponding usernames from AD. By default it also adds permissions for the SYSTEM, Domain Admins and Administrator group, but can also add additional groups if required. Can also folders containing roaming profile folders (with the .v2-v6 suffix. )
+Fixes permissions on user data folders on file servers and adds permissions to folders with corresponding usernames from AD. By default it also adds permissions for the SYSTEM, Domain Admins and Administrator group, but can also add additional groups if required. Can also set permissions on folders containing roaming profile folders (with the .v2-v6 suffix.)
 
 On completion it will generate a HTML report in the same folder detailing any error.
 
