@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 0.3.1
+.VERSION 0.3.2
 
 .GUID 822e92d8-2cbd-4db1-9c78-ccbe1a200acd
 
@@ -60,8 +60,8 @@ Write-Warning "You are about to change permissions on $($Userfolders.Count) fold
 Foreach ($Folder in $Userfolders) {
 
     Write-host "`nSetting permissions for folder: $Folder" -NoNewline
-    $Failed = 0
     $Success = 0
+    $derror = $null
 
     $Username = $env:userdomain + '\' + $Folder.BaseName
     if ($Username -match '.v[1-8]') { $Username = $Username -replace '.{3}$' } 
@@ -116,9 +116,9 @@ Foreach ($Folder in $Userfolders) {
             {
                 Set-Acl $InnerItem.FullName $ACL
                 $Success++
-                Write-host "`r$Folder - Applying files processed $success files" -NoNewline -ForegroundColor Green
+                Write-host "`r$Folder - Applying files processed $success items" -NoNewline -ForegroundColor Green
             }
-            write-host "`r$Folder permissions complete. $success files proccessed." -NoNewline -ForegroundColor Green
+            write-host "`r$Folder permissions complete. $success items proccessed." -NoNewline -ForegroundColor Green
         } catch {
             $derror = "$InnerItem - " + $_.Exception.Message  
         }
